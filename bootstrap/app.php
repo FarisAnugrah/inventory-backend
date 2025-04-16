@@ -12,10 +12,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        // ✅ Middleware Global (jika ada yang harus jalan di semua request)
+        // Middleware Global (jika ada yang harus jalan di semua request)
         // $middleware->append(\App\Http\Middleware\Authenticate::class);
 
-        // ✅ Alias Middleware — bisa dipakai di route dengan nama pendek
+        // Alias Middleware — bisa dipakai di route dengan nama pendek
         $middleware->alias([
             'auth.jwt'   => \PHPOpenSourceSaver\JWTAuth\Http\Middleware\Authenticate::class,
             'jwt.auth'   => \App\Http\Middleware\JWTAuthentication::class, // optional, jika kamu pakai custom middleware
@@ -27,7 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withProviders([
-        // ✅ JWTAuth Service Provider
+        // JWTAuth Service Provider
         \PHPOpenSourceSaver\JWTAuth\Providers\LaravelServiceProvider::class
     ])
     ->withExceptions(function (Exceptions $exceptions) {

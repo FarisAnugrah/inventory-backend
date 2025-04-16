@@ -16,19 +16,19 @@ use App\Http\Middleware\StaffMiddleware;
 use App\Http\Middleware\ManajerMiddleware;
 use App\Http\Controllers\AdminController;
 
-// 🔐 === AUTHENTICATION (Public Access) ===
+// === AUTHENTICATION (Public Access) ===
 // Rute ini bisa diakses tanpa token
 Route::post('/register', [AuthController::class, 'register'])->name('register'); // Register user baru (admin/staff/manajer)
 Route::post('/login', [AuthController::class, 'login'])->name('login'); // Login dan dapatkan JWT token
 
-// 🛡️ === JWT AUTH PROTECTED ROUTES (Harus login dengan token JWT) ===
+// === JWT AUTH PROTECTED ROUTES (Harus login dengan token JWT) ===
 Route::middleware('auth.jwt')->group(function () {
 
-    // 🔎 Info akun saat ini + logout
+    // Info akun saat ini + logout
     Route::get('/me', [AuthController::class, 'me']); // Ambil data user yang sedang login
     Route::post('/logout', [AuthController::class, 'logout']); // Logout dan invalidate token
 
-    // 🧑‍💼 === ADMIN ONLY ===
+    // === ADMIN ONLY ===
     // Semua route dalam blok ini hanya bisa diakses oleh user dengan role `admin`
     Route::middleware('admin')->group(function () {
         Route::resource('users', UserController::class); // CRUD user lain
@@ -38,7 +38,7 @@ Route::middleware('auth.jwt')->group(function () {
         Route::post('/admin/setting', [AdminController::class, 'settings']); // Setting khusus admin
     });
 
-    // 🧑‍🔧 === STAFF ONLY ===
+    // === STAFF ONLY ===
     // Digunakan untuk staf gudang yang bertugas mencatat aktivitas barang
     Route::middleware('staff')->group(function () {
         Route::resource('barang-masuk', BarangMasukController::class); // Tambah atau lihat barang masuk
@@ -48,7 +48,7 @@ Route::middleware('auth.jwt')->group(function () {
         // Route::resource('mutasi-gudang', MutasiGudangController::class); // Mutasi barang antar gudang
     });
 
-    // 🧑‍💼 === MANAJER ONLY ===
+    // === MANAJER ONLY ===
     // Manajer hanya memantau dan menyetujui transaksi (tidak melakukan CRUD data utama)
     Route::middleware('manajer')->group(function () {
         Route::resource('barang-keluar', BarangKeluarController::class)->only(['update']); // Setujui permintaan barang keluar
