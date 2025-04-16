@@ -3,7 +3,6 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use App\Http\Middleware\Authenticate;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -13,19 +12,25 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        // Daftarkan middleware global
-        $middleware->append(\App\Http\Middleware\Authenticate::class);
+        // ✅ Middleware Global (jika ada yang harus jalan di semua request)
+        // $middleware->append(\App\Http\Middleware\Authenticate::class);
 
-        // Daftarkan alias middleware
+        // ✅ Alias Middleware — bisa dipakai di route dengan nama pendek
         $middleware->alias([
-            'auth.jwt' => \PHPOpenSourceSaver\JWTAuth\Http\Middleware\Authenticate::class,
-            'jwt.auth' => \App\Http\Middleware\JWTAuthentication::class,
+            'auth.jwt'   => \PHPOpenSourceSaver\JWTAuth\Http\Middleware\Authenticate::class,
+            'jwt.auth'   => \App\Http\Middleware\JWTAuthentication::class, // optional, jika kamu pakai custom middleware
+
+            // Role-based Middleware
+            'admin'      => \App\Http\Middleware\AdminMiddleware::class,
+            'staff'      => \App\Http\Middleware\StaffMiddleware::class,
+            'manajer'    => \App\Http\Middleware\ManajerMiddleware::class,
         ]);
     })
     ->withProviders([
-        // Register JWT Service Provider
+        // ✅ JWTAuth Service Provider
         \PHPOpenSourceSaver\JWTAuth\Providers\LaravelServiceProvider::class
     ])
     ->withExceptions(function (Exceptions $exceptions) {
-        //
-    })->create();
+        // Custom exception handling here (optional)
+    })
+    ->create();

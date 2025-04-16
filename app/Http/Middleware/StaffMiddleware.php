@@ -4,19 +4,18 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 
 class StaffMiddleware
 {
     public function handle(Request $request, Closure $next)
     {
-        $user = Auth::user();
-        if ($user && $user->role == 'staff') {
+        $user = JWTAuth::parseToken()->authenticate();
+
+        if ($user && $user->role === 'staff') {
             return $next($request);
         }
 
-        return response()->json(['message' => 'Unauthorized'], 403);
+        return response()->json(['error' => 'Unauthorized (Staff only)'], 403);
     }
 }
-
-

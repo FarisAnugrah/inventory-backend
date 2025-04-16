@@ -10,16 +10,12 @@ class AdminMiddleware
 {
     public function handle(Request $request, Closure $next)
     {
-        $user = JWTAuth::user();  // Mendapatkan pengguna yang sedang login
+        $user = JWTAuth::parseToken()->authenticate();
 
-        // Memeriksa apakah role pengguna adalah admin
         if ($user && $user->role === 'admin') {
             return $next($request);
         }
 
-        return response()->json(['message' => 'Unauthorized'], 403);
+        return response()->json(['error' => 'Unauthorized (Admin only)'], 403);
     }
 }
-
-
-

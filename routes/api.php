@@ -16,41 +16,43 @@ use App\Http\Middleware\StaffMiddleware;
 use App\Http\Middleware\ManajerMiddleware;
 use App\Http\Controllers\AdminController;
 
-// Rute untuk autentikasi (login, register, dll)
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
+// 🔐 === AUTHENTICATION (Public Access) ===
+// Rute ini bisa diakses tanpa token
+Route::post('/register', [AuthController::class, 'register'])->name('register'); // Register user baru (admin/staff/manajer)
+Route::post('/login', [AuthController::class, 'login'])->name('login'); // Login dan dapatkan JWT token
 
-// Middleware untuk autentikasi JWT
-Route::middleware('auth:api')->group(function () {
-    // Rute untuk mendapatkan informasi pengguna yang sedang login
-    Route::get('/me', [AuthController::class, 'me']);
-    Route::post('/logout', [AuthController::class, 'logout']);
+// 🛡️ === JWT AUTH PROTECTED ROUTES (Harus login dengan token JWT) ===
+Route::middleware('auth.jwt')->group(function () {
 
-    // Rute Admin (Admin hanya bisa mengakses ini)
-    Route::middleware(AdminMiddleware::class)->group(function () {
-        Route::resource('users', UserController::class);  // Mengelola Pengguna
-        Route::resource('gudang', GudangController::class);  // Mengelola Gudang
-        Route::resource('kategori', KategoriController::class);  // Mengelola Kategori Barang
-        Route::resource('transaksi', TransaksiController::class);  // Melihat Laporan
+    // 🔎 Info akun saat ini + logout
+    Route::get('/me', [AuthController::class, 'me']); // Ambil data user yang sedang login
+    Route::post('/logout', [AuthController::class, 'logout']); // Logout dan invalidate token
 
-        // Hanya Admin yang bisa membuat atau menghapus data
-        Route::post('/admin/setting', [AdminController::class, 'settings']);
+    // 🧑‍💼 === ADMIN ONLY ===
+    // Semua route dalam blok ini hanya bisa diakses oleh user dengan role `admin`
+    Route::middleware('admin')->group(function () {
+        Route::resource('users', UserController::class); // CRUD user lain
+        Route::resource('gudang', GudangController::class); // CRUD data gudang
+        Route::resource('kategori', KategoriController::class); // CRUD kategori barang
+        Route::resource('transaksi', TransaksiController::class); // Lihat laporan semua transaksi
+        Route::post('/admin/setting', [AdminController::class, 'settings']); // Setting khusus admin
     });
 
-    // Rute Staff (Staff hanya bisa mengakses ini)
-    Route::middleware(StaffMiddleware::class)->group(function () {
-        Route::resource('barang-masuk', BarangMasukController::class);  // Mencatat Barang Masuk
-        Route::resource('barang-keluar', BarangKeluarController::class);  // Mencatat Barang Keluar
+    // 🧑‍🔧 === STAFF ONLY ===
+    // Digunakan untuk staf gudang yang bertugas mencatat aktivitas barang
+    Route::middleware('staff')->group(function () {
+        Route::resource('barang-masuk', BarangMasukController::class); // Tambah atau lihat barang masuk
+        Route::resource('barang-keluar', BarangKeluarController::class)->only(['index', 'store']); // Catat permintaan barang keluar
 
-        // Jika mutasi gudang hanya untuk staff, aktifkan rute berikut
-        // Route::resource('mutasi-gudang', MutasiGudangController::class);  // Melakukan Mutasi Barang
+        // Jika mutasi antar gudang hanya dilakukan staff, bisa aktifkan ini
+        // Route::resource('mutasi-gudang', MutasiGudangController::class); // Mutasi barang antar gudang
     });
 
-    // Rute Manajer (Manajer hanya bisa mengakses ini)
-    Route::middleware(ManajerMiddleware::class)->group(function () {
-        // Hanya Manajer yang bisa menyetujui atau melihat transaksi tertentu
-        Route::resource('barang-keluar', BarangKeluarController::class);  // Menyetujui Permintaan Barang Keluar
-        Route::resource('notifikasi', NotifikasiController::class);  // Menerima Notifikasi Stok Habis
-        Route::resource('transaksi', TransaksiController::class);  // Melihat Laporan Barang Masuk & Keluar
+    // 🧑‍💼 === MANAJER ONLY ===
+    // Manajer hanya memantau dan menyetujui transaksi (tidak melakukan CRUD data utama)
+    Route::middleware('manajer')->group(function () {
+        Route::resource('barang-keluar', BarangKeluarController::class)->only(['update']); // Setujui permintaan barang keluar
+        Route::resource('notifikasi', NotifikasiController::class); // Lihat notifikasi stok habis atau lainnya
+        Route::resource('transaksi', TransaksiController::class); // Lihat laporan transaksi
     });
 });

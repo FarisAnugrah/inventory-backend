@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
-  
+
     // Menampilkan daftar pengguna
     public function index()
     {
@@ -22,7 +22,7 @@ class UserController extends Controller
         $user = User::findOrFail($id);
         return response()->json($user);
     }
-
+    
     // Membuat pengguna baru
     public function store(Request $request)
     {

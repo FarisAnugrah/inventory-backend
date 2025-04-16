@@ -10,12 +10,12 @@ class ManajerMiddleware
 {
     public function handle(Request $request, Closure $next)
     {
-        $user = JWTAuth::user();
+        $user = JWTAuth::parseToken()->authenticate();
 
         if ($user && $user->role === 'manajer') {
             return $next($request);
         }
 
-        return response()->json(['message' => 'Unauthorized'], 403);
+        return response()->json(['error' => 'Unauthorized (Manajer only)'], 403);
     }
 }
