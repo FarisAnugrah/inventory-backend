@@ -18,7 +18,6 @@ use App\Http\Controllers\AdminController;
 
 // === AUTHENTICATION (Public Access) ===
 // Rute ini bisa diakses tanpa token
-Route::post('/register', [AuthController::class, 'register'])->name('register'); // Register user baru (admin/staff/manajer)
 Route::post('/login', [AuthController::class, 'login'])->name('login'); // Login dan dapatkan JWT token
 
 // === JWT AUTH PROTECTED ROUTES (Harus login dengan token JWT) ===
@@ -41,6 +40,7 @@ Route::middleware('auth.jwt')->group(function () {
     // === STAFF ONLY ===
     // Digunakan untuk staf gudang yang bertugas mencatat aktivitas barang
     Route::middleware('staff')->group(function () {
+        Route::resource('barang', BarangController::class);
         Route::resource('barang-masuk', BarangMasukController::class); // Tambah atau lihat barang masuk
         Route::resource('barang-keluar', BarangKeluarController::class)->only(['index', 'store']); // Catat permintaan barang keluar
 

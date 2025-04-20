@@ -20,6 +20,8 @@ class User extends Authenticatable implements JWTSubject
 
     protected $dates = ['deleted_at']; // Ini opsional di versi Laravel terbaru, tapi aman untuk kompatibilitas
 
+    protected $hidden = ['password'];
+
     public function getJWTIdentifier()
     {
         return $this->getKey();

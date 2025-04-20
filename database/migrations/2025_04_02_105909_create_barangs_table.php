@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('barang', function (Blueprint $table) {
             $table->id();  // Kolom ID dengan bigIncrements (bigInteger)
+            $table->string('kode_barang')->unique(); // Kode unik seperti BRG-001
             $table->string('nama_barang');
             $table->foreignId('kategori_id')->constrained('kategori');  // Foreign key ke kategori
             $table->foreignId('gudang_id')->constrained('gudang');  // Foreign key ke gudang
@@ -29,6 +30,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('barangs');
+        Schema::dropIfExists('barang');
     }
 };

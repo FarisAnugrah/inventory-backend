@@ -17,7 +17,7 @@ return new class extends Migration
             $table->bigInteger('total_harga');
             $table->bigInteger('uang_pembayaran');
             $table->bigInteger('uang_kembalian');
-            $table->timestamp('tanggal');
+            $table->timestamp('tanggal'); //ganti datetime
             $table->timestamps();
         });
     }

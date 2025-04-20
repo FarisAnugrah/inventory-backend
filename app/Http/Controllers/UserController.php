@@ -12,7 +12,7 @@ class UserController extends Controller
     // Menampilkan daftar pengguna
     public function index()
     {
-        $users = User::all();
+        $users = User::paginate(10);
         return response()->json($users);
     }
 
@@ -22,7 +22,7 @@ class UserController extends Controller
         $user = User::findOrFail($id);
         return response()->json($user);
     }
-    
+
     // Membuat pengguna baru
     public function store(Request $request)
     {
