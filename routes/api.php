@@ -1,58 +1,96 @@
-<?php
+    <?php
 
-use App\Http\Controllers\AuthController;
-use App\Http\Controllers\UserController;
-use App\Http\Controllers\GudangController;
-use App\Http\Controllers\KategoriController;
-use App\Http\Controllers\BarangController;
-use App\Http\Controllers\BarangMasukController;
-use App\Http\Controllers\BarangKeluarController;
-use App\Http\Controllers\MutasiGudangController;
-use App\Http\Controllers\NotifikasiController;
-use App\Http\Controllers\TransaksiController;
-use Illuminate\Support\Facades\Route;
-use App\Http\Middleware\AdminMiddleware;
-use App\Http\Middleware\StaffMiddleware;
-use App\Http\Middleware\ManajerMiddleware;
-use App\Http\Controllers\AdminController;
+    use Illuminate\Support\Facades\Route;
+    use App\Http\Controllers\AuthController;
+    use App\Http\Controllers\UserController;
+    use App\Http\Controllers\GudangController;
+    use App\Http\Controllers\KategoriController;
+    use App\Http\Controllers\BarangController;
+    use App\Http\Controllers\BarangMasukController;
+    use App\Http\Controllers\BarangKeluarController;
+    use App\Http\Controllers\MutasiGudangController;
+    use App\Http\Controllers\NotifikasiController;
+    use App\Http\Controllers\TransaksiController;
+    use App\Http\Controllers\AdminController;
 
-// === AUTHENTICATION (Public Access) ===
-// Rute ini bisa diakses tanpa token
-Route::post('/login', [AuthController::class, 'login'])->name('login'); // Login dan dapatkan JWT token
+    // === PUBLIC ===
+    Route::post('/login', [AuthController::class, 'login']);
 
-// === JWT AUTH PROTECTED ROUTES (Harus login dengan token JWT) ===
-Route::middleware('auth.jwt')->group(function () {
+    // === PROTECTED ===
+    Route::middleware('auth.jwt')->group(function () {
 
-    // Info akun saat ini + logout
-    Route::get('/me', [AuthController::class, 'me']); // Ambil data user yang sedang login
-    Route::post('/logout', [AuthController::class, 'logout']); // Logout dan invalidate token
+        // === ME & LOGOUT ===
+        Route::get('/me', [AuthController::class, 'me']);
+        Route::post('/logout', [AuthController::class, 'logout']);
 
-    // === ADMIN ONLY ===
-    // Semua route dalam blok ini hanya bisa diakses oleh user dengan role `admin`
-    Route::middleware('admin')->group(function () {
-        Route::resource('users', UserController::class); // CRUD user lain
-        Route::resource('gudang', GudangController::class); // CRUD data gudang
-        Route::resource('kategori', KategoriController::class); // CRUD kategori barang
-        Route::resource('transaksi', TransaksiController::class); // Lihat laporan semua transaksi
-        Route::post('/admin/setting', [AdminController::class, 'settings']); // Setting khusus admin
+        // === ADMIN ONLY ===
+        Route::middleware('admin')->group(function () {
+            // Users
+            Route::get('/users', [UserController::class, 'index']);
+            Route::post('/users', [UserController::class, 'store']);
+            Route::get('/users/{id}', [UserController::class, 'show']);
+            Route::put('/users/{id}', [UserController::class, 'update']);
+            Route::delete('/users/{id}', [UserController::class, 'destroy']);
+
+            // Gudang
+            Route::get('/gudang', [GudangController::class, 'index']);
+            Route::post('/gudang', [GudangController::class, 'store']);
+            Route::get('/gudang/{id}', [GudangController::class, 'show']);
+            Route::put('/gudang/{id}', [GudangController::class, 'update']);
+            Route::delete('/gudang/{id}', [GudangController::class, 'destroy']);
+
+            // Kategori
+            Route::get('/kategori', [KategoriController::class, 'index']);
+            Route::post('/kategori', [KategoriController::class, 'store']);
+            Route::get('/kategori/{id}', [KategoriController::class, 'show']);
+            Route::put('/kategori/{id}', [KategoriController::class, 'update']);
+            Route::delete('/kategori/{id}', [KategoriController::class, 'destroy']);
+
+            // Transaksi (lihat laporan)
+            Route::get('/transaksi', [TransaksiController::class, 'index']);
+            Route::get('/transaksi/{id}', [TransaksiController::class, 'show']);
+
+            // Admin Settings
+            Route::post('/admin/setting', [AdminController::class, 'settings']);
+        });
+
+        // === STAFF ONLY ===
+        Route::middleware('staff')->group(function () {
+            // Barang
+            Route::get('/barang', [BarangController::class, 'index']);
+            Route::post('/barang', [BarangController::class, 'store']);
+            Route::get('/barang/{id}', [BarangController::class, 'show']);
+            Route::put('/barang/{id}', [BarangController::class, 'update']);
+            Route::patch('/barang/{id}', [BarangController::class, 'update']);
+            Route::delete('/barang/{id}', [BarangController::class, 'destroy']);
+
+            // Barang Masuk
+            Route::get('/barang-masuk', [BarangMasukController::class, 'index']);
+            Route::post('/barang-masuk', [BarangMasukController::class, 'store']);
+            Route::get('/barang-masuk/{id}', [BarangMasukController::class, 'show']);
+            Route::put('/barang-masuk/{id}', [BarangMasukController::class, 'update']);
+            Route::delete('/barang-masuk/{id}', [BarangMasukController::class, 'destroy']);
+
+            // Barang Keluar (store saja)
+            Route::get('/barang-keluar', [BarangKeluarController::class, 'index']);
+            Route::post('/barang-keluar', [BarangKeluarController::class, 'store']);
+
+            // Mutasi Gudang (opsional)
+            // Route::get('/mutasi-gudang', [MutasiGudangController::class, 'index']);
+            // Route::post('/mutasi-gudang', [MutasiGudangController::class, 'store']);
+        });
+
+        // === MANAJER ONLY ===
+        Route::middleware('manajer')->group(function () {
+            // Approve Barang Keluar
+            Route::put('/barang-keluar/{id}', [BarangKeluarController::class, 'update']);
+
+            // Notifikasi
+            Route::get('/notifikasi', [NotifikasiController::class, 'index']);
+            Route::get('/notifikasi/{id}', [NotifikasiController::class, 'show']);
+
+            // Laporan Transaksi
+            Route::get('/transaksi', [TransaksiController::class, 'index']);
+            Route::get('/transaksi/{id}', [TransaksiController::class, 'show']);
+        });
     });
-
-    // === STAFF ONLY ===
-    // Digunakan untuk staf gudang yang bertugas mencatat aktivitas barang
-    Route::middleware('staff')->group(function () {
-        Route::resource('barang', BarangController::class);
-        Route::resource('barang-masuk', BarangMasukController::class); // Tambah atau lihat barang masuk
-        Route::resource('barang-keluar', BarangKeluarController::class)->only(['index', 'store']); // Catat permintaan barang keluar
-
-        // Jika mutasi antar gudang hanya dilakukan staff, bisa aktifkan ini
-        // Route::resource('mutasi-gudang', MutasiGudangController::class); // Mutasi barang antar gudang
-    });
-
-    // === MANAJER ONLY ===
-    // Manajer hanya memantau dan menyetujui transaksi (tidak melakukan CRUD data utama)
-    Route::middleware('manajer')->group(function () {
-        Route::resource('barang-keluar', BarangKeluarController::class)->only(['update']); // Setujui permintaan barang keluar
-        Route::resource('notifikasi', NotifikasiController::class); // Lihat notifikasi stok habis atau lainnya
-        Route::resource('transaksi', TransaksiController::class); // Lihat laporan transaksi
-    });
-});

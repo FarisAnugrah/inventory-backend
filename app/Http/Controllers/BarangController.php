@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Barang;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 
 class BarangController extends Controller
 {
@@ -12,7 +11,7 @@ class BarangController extends Controller
     {
         $query = Barang::query();
 
-        // Jika ada parameter search, filter berdasarkan nama_barang
+        // Filter berdasarkan nama_barang jika ada search
         if ($request->has('search')) {
             $query->where('nama_barang', 'like', '%' . $request->search . '%');
         }
@@ -23,21 +22,20 @@ class BarangController extends Controller
         return response()->json($barang);
     }
 
-
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'kode_barang' => 'required|string|unique:barang,kode_barang',
             'nama_barang' => 'required|string',
             'kategori_id' => 'required|exists:kategori,id',
+            'satuan' => 'required|string',
+            'merk' => 'required|string',
             'gudang_id' => 'required|exists:gudang,id',
-            'stok_kesuluruhan' => 'required|integer',
+            'stok_keseluruhan' => 'required|integer',
             'harga' => 'required|integer',
             'minimum_stok' => 'required|integer',
         ]);
 
-
-        $barang = Barang::create($validated);
+        $barang = Barang::create($validated); // kode_barang otomatis di model
 
         return response()->json([
             'message' => 'Barang berhasil ditambahkan',
@@ -67,8 +65,10 @@ class BarangController extends Controller
             'kode_barang' => 'required|string|unique:barang,kode_barang,' . $id,
             'nama_barang' => 'required|string',
             'kategori_id' => 'required|exists:kategori,id',
+            'satuan' => 'required|string',
+            'merk' => 'required|string',
             'gudang_id' => 'required|exists:gudang,id',
-            'stok_kesuluruhan' => 'required|integer',
+            'stok_keseluruhan' => 'required|integer',
             'harga' => 'required|integer',
             'minimum_stok' => 'required|integer',
         ]);
