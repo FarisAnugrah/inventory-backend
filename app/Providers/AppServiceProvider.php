@@ -4,7 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate; // <-- TAMBAHKAN IMPORT INI
-use App\Models\User;  
+use App\Models\User;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -27,7 +27,7 @@ class AppServiceProvider extends ServiceProvider
             // Contoh 1: Jika User model memiliki properti 'role'
             // (misalnya 'staff', 'manajer', 'admin')
             if (isset($user->role)) { // Pastikan properti 'role' ada
-                 return $user->role === 'staff' || $user->role === 'manajer';
+                 return $user->role === 'staff' || $user->role === 'manajer'  || $user->role === 'admin';
             }
 
             // Contoh 2: Jika Anda menggunakan method hasRole() pada model User

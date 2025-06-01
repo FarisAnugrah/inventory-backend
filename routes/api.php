@@ -23,6 +23,15 @@
         Route::get('/me', [AuthController::class, 'me']);
         Route::post('/logout', [AuthController::class, 'logout']);
 
+        Route::get('/kategori', [KategoriController::class, 'index']);
+        Route::get('/kategori/{id}', [KategoriController::class, 'show']);
+        Route::get('/barang-masuk', [BarangMasukController::class, 'index']);
+        Route::get('/barang-masuk/{id}', [BarangMasukController::class, 'show']);
+
+        // Laporan Transaksi
+        Route::get('/laporan/barang-masuk', [BarangMasukController::class, 'laporan']);
+        Route::get('/laporan/barang-keluar', [BarangKeluarController::class, 'laporan']);
+
         // === ADMIN ONLY ===
         Route::middleware('admin')->group(function () {
             // Users
@@ -40,9 +49,8 @@
             Route::delete('/gudang/{id}', [GudangController::class, 'destroy']);
 
             // Kategori
-            Route::get('/kategori', [KategoriController::class, 'index']);
+
             Route::post('/kategori', [KategoriController::class, 'store']);
-            Route::get('/kategori/{id}', [KategoriController::class, 'show']);
             Route::put('/kategori/{id}', [KategoriController::class, 'update']);
             Route::delete('/kategori/{id}', [KategoriController::class, 'destroy']);
 
@@ -61,9 +69,8 @@
             Route::get('/barang/{id}', [BarangController::class, 'show']);
 
             // Barang Masuk
-            Route::get('/barang-masuk', [BarangMasukController::class, 'index']);
+
             Route::post('/barang-masuk', [BarangMasukController::class, 'store']);
-            Route::get('/barang-masuk/{id}', [BarangMasukController::class, 'show']);
             Route::put('/barang-masuk/{id}', [BarangMasukController::class, 'update']);
             Route::delete('/barang-masuk/{id}', [BarangMasukController::class, 'destroy']);
 
@@ -86,10 +93,5 @@
             // Notifikasi
             Route::get('/notifikasi', [NotifikasiController::class, 'index']);
             Route::get('/notifikasi/{id}', [NotifikasiController::class, 'show']);
-
         });
-
-         // Laporan Transaksi
-            Route::get('/laporan/barang-masuk', [BarangMasukController::class, 'laporan']);
-            Route::get('/laporan/barang-keluar', [BarangKeluarController::class, 'laporan']);
     });
