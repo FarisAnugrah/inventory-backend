@@ -13,11 +13,12 @@ return new class extends Migration
     {
         Schema::create('barang_masuk', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('barang_id')->constrained('barang');  // Foreign key ke tabel 'barangs'
-            $table->foreignId('user_id')->constrained('users');  // Foreign key ke tabel 'users'
-            $table->foreignId('gudang_id')->constrained('gudang');  // Foreign key ke tabel 'gudang'
+            $table->string('kode_masuk')->unique();
+            $table->foreignId('barang_id')->constrained('barang');
+            $table->foreignId('user_id')->constrained('users');
+            $table->foreignId('gudang_id')->constrained('gudang');
             $table->integer('jumlah');
-            $table->timestamp('tanggal');
+            $table->date('tanggal');
             $table->timestamps();
         });
     }
@@ -27,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('barang_masuks');
+        Schema::dropIfExists('barang_masuk');
     }
 };

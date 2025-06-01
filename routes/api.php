@@ -58,11 +58,7 @@
         Route::middleware('staff')->group(function () {
             // Barang
             Route::get('/barang', [BarangController::class, 'index']);
-            Route::post('/barang', [BarangController::class, 'store']);
             Route::get('/barang/{id}', [BarangController::class, 'show']);
-            Route::put('/barang/{id}', [BarangController::class, 'update']);
-            Route::patch('/barang/{id}', [BarangController::class, 'update']);
-            Route::delete('/barang/{id}', [BarangController::class, 'destroy']);
 
             // Barang Masuk
             Route::get('/barang-masuk', [BarangMasukController::class, 'index']);
@@ -71,11 +67,11 @@
             Route::put('/barang-masuk/{id}', [BarangMasukController::class, 'update']);
             Route::delete('/barang-masuk/{id}', [BarangMasukController::class, 'destroy']);
 
-            // Barang Keluar (store saja)
+            // Barang Keluar
             Route::get('/barang-keluar', [BarangKeluarController::class, 'index']);
             Route::post('/barang-keluar', [BarangKeluarController::class, 'store']);
 
-            // Mutasi Gudang (opsional)
+            // Mutasi Gudang
             // Route::get('/mutasi-gudang', [MutasiGudangController::class, 'index']);
             // Route::post('/mutasi-gudang', [MutasiGudangController::class, 'store']);
         });
@@ -90,7 +86,7 @@
             Route::get('/notifikasi/{id}', [NotifikasiController::class, 'show']);
 
             // Laporan Transaksi
-            Route::get('/transaksi', [TransaksiController::class, 'index']);
-            Route::get('/transaksi/{id}', [TransaksiController::class, 'show']);
+            Route::get('/laporan/barang-masuk', [BarangMasukController::class, 'laporan']);
+            Route::get('/laporan/barang-keluar', [BarangKeluarController::class, 'laporan']);
         });
     });

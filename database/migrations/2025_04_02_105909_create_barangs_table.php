@@ -17,11 +17,8 @@ return new class extends Migration
             $table->string('nama_barang');
             $table->foreignId('kategori_id')->constrained('kategori');  // Foreign key ke kategori
             $table->string('satuan');
-            $table->string('merk');
             $table->foreignId('gudang_id')->constrained('gudang');  // Foreign key ke gudang
             $table->integer('stok_keseluruhan');
-            $table->bigInteger('harga');
-            $table->integer('minimum_stok');
             $table->timestamp('deleted_at')->nullable(); // Soft delete
             $table->timestamps();
         });

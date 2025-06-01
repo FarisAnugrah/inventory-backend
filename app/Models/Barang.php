@@ -4,45 +4,36 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Barang extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory;
 
-    protected $table = 'barang'; // Nama tabel biar eksplisit
+    protected $table = 'barang';
 
     protected $fillable = [
+        'kode_barang',
         'nama_barang',
         'kategori_id',
-        'satuan',
-        'merk',
         'gudang_id',
-        'stok_keseluruhan',
-        'harga',
-        'minimum_stok',
+        'stok_keseluruhan', 
+        'satuan'
+
     ];
 
-    protected static function boot()
-    {
-        parent::boot();
-
-        static::creating(function ($barang) {
-            $lastId = self::withTrashed()->max('id') ?? 0;
-            $barang->kode_barang = 'BRG' . str_pad($lastId + 1, 3, '0', STR_PAD_LEFT);
-        });
-    }
-
-
-    // Relasi ke Kategori
     public function kategori()
     {
         return $this->belongsTo(Kategori::class);
     }
 
-    // Relasi ke Gudang
     public function gudang()
     {
         return $this->belongsTo(Gudang::class);
+    }
+
+    // Di Barang.php
+    public function barangMasuk()
+    {
+        return $this->hasMany(BarangMasuk::class);
     }
 }

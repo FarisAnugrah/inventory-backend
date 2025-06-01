@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Hash;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 use PHPOpenSourceSaver\JWTAuth\Exceptions\JWTException;
 
+
 class AuthController extends Controller
 {
     // Login user
@@ -32,7 +33,7 @@ class AuthController extends Controller
             ], 500);
         }
 
-        $user = auth()->user();
+        $user = JWTAuth::user();
 
         return response()->json([
             'data' => [
