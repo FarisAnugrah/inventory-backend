@@ -186,9 +186,9 @@ class BarangMasukController extends Controller
             return [
                 'nama_staff'    => $item->user->name,
                 'kode_barang'   => $item->barang->kode_barang,
-                'kategori'      => $item->barang->kategori->nama,
+                'kategori'      => $item->barang->kategori ? $item->barang->kategori->nama_kategori : null,
                 'nama_barang'   => $item->barang->nama_barang,
-                'gudang'        => $item->gudang->nama,
+                'gudang'        => $item->gudang ? $item->gudang->nama_gudang : null,
                 'stok_masuk'    => $item->jumlah,
                 'tanggal_masuk' => $item->tanggal,
             ];
