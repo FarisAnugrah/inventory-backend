@@ -71,6 +71,8 @@
             Route::get('/barang-keluar', [BarangKeluarController::class, 'index']);
             Route::post('/barang-keluar', [BarangKeluarController::class, 'store']);
 
+            Route::get('/laporan/barang-masuk', [BarangMasukController::class, 'laporan']);
+
             // Mutasi Gudang
             // Route::get('/mutasi-gudang', [MutasiGudangController::class, 'index']);
             // Route::post('/mutasi-gudang', [MutasiGudangController::class, 'store']);
