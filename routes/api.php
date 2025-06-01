@@ -71,6 +71,8 @@
             Route::get('/barang-keluar', [BarangKeluarController::class, 'index']);
             Route::post('/barang-keluar', [BarangKeluarController::class, 'store']);
 
+            Route::get('/laporan/barang-masuk', [BarangMasukController::class, 'laporan']);
+
             // Mutasi Gudang
             // Route::get('/mutasi-gudang', [MutasiGudangController::class, 'index']);
             // Route::post('/mutasi-gudang', [MutasiGudangController::class, 'store']);
@@ -84,11 +86,10 @@
             // Notifikasi
             Route::get('/notifikasi', [NotifikasiController::class, 'index']);
             Route::get('/notifikasi/{id}', [NotifikasiController::class, 'show']);
+
         });
 
-        // === AKSES STAFF ATAU MANAJER ===
-        Route::middleware('staffOrManajer')->group(function () { // Menggunakan middleware baru
+         // Laporan Transaksi
             Route::get('/laporan/barang-masuk', [BarangMasukController::class, 'laporan']);
             Route::get('/laporan/barang-keluar', [BarangKeluarController::class, 'laporan']);
-        });
     });

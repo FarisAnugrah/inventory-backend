@@ -6,6 +6,7 @@ use App\Models\Barang;
 use App\Models\BarangMasuk;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth; // Tambahkan ini di atas class controller
+use Illuminate\Support\Facades\Gate;
 
 class BarangMasukController extends Controller
 {
@@ -173,6 +174,8 @@ class BarangMasukController extends Controller
 
     public function laporan(Request $request)
     {
+        $this->authorize('view-report'); // Menggunakan Gate
+
         $query = BarangMasuk::with(['barang.kategori', 'gudang', 'user']);
 
         if ($request->has('from') && $request->has('to')) {
