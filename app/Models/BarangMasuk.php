@@ -16,8 +16,7 @@ class BarangMasuk extends Model
         'barang_id',
         'user_id',
         'gudang_id',
-        'jumlah',
-        'tanggal'
+        'jumlah'
     ];
 
     public function barang()

@@ -5,8 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Barang;
 use App\Models\BarangMasuk;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth; // Tambahkan ini di atas class controller
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule; //
 
 class BarangMasukController extends Controller
 {
@@ -24,7 +25,7 @@ class BarangMasukController extends Controller
                     'stok_masuk' => $item->jumlah,
                     'gudang'        => $item->gudang ? $item->gudang->nama_gudang : null,
                     'satuan' => $item->barang->satuan,
-                    'tanggal' => $item->tanggal,
+                    'tanggal' => $item->created_at()->format('Y-m-d'),
                     'nama_staff' => $item->user->name,
                 ];
             });
@@ -87,7 +88,6 @@ class BarangMasukController extends Controller
             'barang_id' => $barang_id,
             'gudang_id' => $validated['gudang_id'],
             'jumlah' => $validated['jumlah'],
-            'tanggal' => now()->format('Y-m-d'),
             'user_id' => Auth::id(),
         ]);
 
@@ -125,33 +125,99 @@ class BarangMasukController extends Controller
 
     public function update(Request $request, $id)
     {
-        $barangMasuk = BarangMasuk::findOrFail($id);
+        // Opsional: Otorisasi menggunakan Gate jika Anda sudah mendefinisikannya
+        // $this->authorize('update-barang-masuk-record'); // Ganti 'update-barang-masuk-record' dengan nama Gate Anda
 
-        $validated = $request->validate([
-            'jumlah' => 'required|integer|min:1',
-            'tanggal' => 'required|date'
+        $barangMasuk = BarangMasuk::findOrFail($id);
+        $barang = $barangMasuk->barang; // Ambil model Barang yang terkait
+
+        // Jika karena suatu alasan barang terkait tidak ditemukan (seharusnya tidak terjadi dengan foreign key yang baik)
+        if (!$barang) {
+            return response()->json([
+                'meta' => [
+                    'status' => 'error',
+                    'message' => 'Data barang inti yang terkait dengan barang masuk ini tidak ditemukan.'
+                ]
+            ], 404);
+        }
+
+        // Validasi input
+        // Field untuk detail Barang (nama_barang, kategori_id, satuan) dibuat opsional
+        // dengan 'sometimes'. Artinya, hanya akan divalidasi jika field tersebut dikirim dalam request.
+        $validatedData = $request->validate([
+            'jumlah'        => 'required|integer|min:1',          // Untuk BarangMasuk (jumlah barang yang masuk)
+            'nama_barang'   => 'sometimes|string|max:255',        // Untuk Barang (opsional)
+            'kategori_id'   => 'sometimes|integer|exists:kategori,id', // Untuk Barang (opsional, pastikan tabel 'kategori' ada)
+            'satuan'        => [                                  // Untuk Barang (opsional, dengan pilihan terbatas)
+                'sometimes',
+                'string',
+                Rule::in(['pcs', 'karton']), // Pilihan satuan seperti dropdown
+            ],
         ]);
 
-        // Ambil data barang terkait
-        $barang = $barangMasuk->barang;
+        // --- Proses Update ---
 
-        // Sesuaikan stok_keseluruhan pada barang
-        // Kurangi dulu dengan jumlah lama dari barangMasuk, lalu tambahkan dengan jumlah baru dari validasi
-        $barang->stok_keseluruhan = $barang->stok_keseluruhan - $barangMasuk->jumlah + $validated['jumlah'];
+        // 1. Simpan jumlah lama dari barangMasuk untuk perhitungan stok
+        $jumlahLamaBarangMasuk = $barangMasuk->jumlah;
+
+        // 2. Update detail pada model Barang (jika ada dalam request)
+        $barangAttributesToUpdate = [];
+        if ($request->has('nama_barang') && isset($validatedData['nama_barang'])) {
+            $barangAttributesToUpdate['nama_barang'] = $validatedData['nama_barang'];
+        }
+        if ($request->has('kategori_id') && isset($validatedData['kategori_id'])) {
+            $barangAttributesToUpdate['kategori_id'] = $validatedData['kategori_id'];
+        }
+        if ($request->has('satuan') && isset($validatedData['satuan'])) {
+            $barangAttributesToUpdate['satuan'] = $validatedData['satuan'];
+        }
+
+        // Jika ada atribut barang yang perlu diupdate, isi ke model Barang
+        if (!empty($barangAttributesToUpdate)) {
+            $barang->fill($barangAttributesToUpdate);
+        }
+
+        // 3. Sesuaikan stok_keseluruhan pada Barang
+        // Logika: Stok Sekarang = Stok Lama - Jumlah Barang Masuk Lama + Jumlah Barang Masuk Baru
+        $jumlahBaruBarangMasuk = $validatedData['jumlah'];
+        $barang->stok_keseluruhan = $barang->stok_keseluruhan - $jumlahLamaBarangMasuk + $jumlahBaruBarangMasuk;
+
+        // Simpan semua perubahan pada model Barang (nama, kategori, satuan, dan stok_keseluruhan)
         $barang->save();
 
-        // Update data barangMasuk itu sendiri
-        // Pastikan 'jumlah' dan 'tanggal' ada di $fillable model BarangMasuk
-        $barangMasuk->update($validated);
+        // 4. Update jumlah pada model BarangMasuk
+        $barangMasuk->update([
+            'jumlah' => $jumlahBaruBarangMasuk
+        ]);
+
+        // Muat ulang relasi untuk memastikan respons berisi data yang paling baru
+        $barangMasuk->load(['barang.kategori', 'gudang', 'user']);
 
         return response()->json([
-            'data' => $barangMasuk,
+            'data' => [ // Sesuaikan format data respons jika perlu
+                'id_barang_masuk' => $barangMasuk->id,
+                'kode_masuk' => $barangMasuk->kode_masuk,
+                'jumlah_masuk_baru' => $barangMasuk->jumlah,
+                'barang_info' => [
+                    'id_barang' => $barang->id,
+                    'kode_barang' => $barang->kode_barang,
+                    'nama_barang' => $barang->nama_barang,
+                    'kategori' => $barang->kategori ? $barang->kategori->nama_kategori : null, // Asumsi kolom nama di tabel kategori adalah nama_kategori
+                    'satuan' => $barang->satuan,
+                    'stok_keseluruhan_sekarang' => $barang->stok_keseluruhan,
+                ],
+                'gudang' => $barangMasuk->gudang ? $barangMasuk->gudang->nama_gudang : null, // Asumsi kolom nama di tabel gudang adalah nama_gudang
+                'dicatat_oleh' => $barangMasuk->user ? $barangMasuk->user->name : null,
+                'tanggal_dicatat' => $barangMasuk->created_at->format('Y-m-d H:i:s'), // Menggunakan created_at
+                'terakhir_diupdate' => $barangMasuk->updated_at->format('Y-m-d H:i:s'),
+            ],
             'meta' => [
                 'status' => 'success',
-                'message' => 'Barang masuk berhasil diupdate'
+                'message' => 'Data barang masuk dan detail barang berhasil diupdate.'
             ]
         ]);
     }
+
 
     public function destroy($id)
     {
@@ -182,7 +248,7 @@ class BarangMasukController extends Controller
             $query->whereBetween('tanggal', [$request->from, $request->to]);
         }
 
-        $data = $query->orderBy('tanggal', 'desc')->get()->map(function ($item) {
+        $data = $query->orderBy('created_at', 'desc')->get()->map(function ($item) {
             return [
                 'nama_staff'    => $item->user->name,
                 'kode_barang'   => $item->barang->kode_barang,
@@ -190,7 +256,7 @@ class BarangMasukController extends Controller
                 'nama_barang'   => $item->barang->nama_barang,
                 'gudang'        => $item->gudang ? $item->gudang->nama_gudang : null,
                 'stok_masuk'    => $item->jumlah,
-                'tanggal_masuk' => $item->tanggal,
+                'tanggal_masuk' => $item->created_at->format('Y-m-d'),
             ];
         });
 

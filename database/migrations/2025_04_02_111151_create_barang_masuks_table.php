@@ -18,7 +18,6 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained('users');
             $table->foreignId('gudang_id')->constrained('gudang');
             $table->integer('jumlah');
-            $table->date('tanggal');
             $table->timestamps();
         });
     }
