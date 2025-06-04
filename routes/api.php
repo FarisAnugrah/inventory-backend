@@ -27,6 +27,10 @@
         Route::get('/kategori/{id}', [KategoriController::class, 'show']);
         Route::get('/barang-masuk', [BarangMasukController::class, 'index']);
         Route::get('/barang-masuk/{id}', [BarangMasukController::class, 'show']);
+        Route::get('/barang', [BarangController::class, 'index']);
+        Route::get('/barang/{id}', [BarangController::class, 'show']);
+        Route::get('/barang-keluar', [BarangKeluarController::class, 'index']);
+
 
         // Laporan Transaksi
         Route::get('/laporan/barang-masuk', [BarangMasukController::class, 'laporan']);
@@ -64,9 +68,7 @@
 
         // === STAFF ONLY ===
         Route::middleware('staff')->group(function () {
-            // Barang
-            Route::get('/barang', [BarangController::class, 'index']);
-            Route::get('/barang/{id}', [BarangController::class, 'show']);
+
 
             // Barang Masuk
 
@@ -75,7 +77,6 @@
             Route::delete('/barang-masuk/{id}', [BarangMasukController::class, 'destroy']);
 
             // Barang Keluar
-            Route::get('/barang-keluar', [BarangKeluarController::class, 'index']);
             Route::post('/barang-keluar', [BarangKeluarController::class, 'store']);
 
             Route::get('/laporan/barang-masuk', [BarangMasukController::class, 'laporan']);

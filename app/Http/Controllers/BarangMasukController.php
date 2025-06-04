@@ -25,8 +25,8 @@ class BarangMasukController extends Controller
                     'stok_masuk' => $item->jumlah,
                     'gudang'        => $item->gudang ? $item->gudang->nama_gudang : null,
                     'satuan' => $item->barang->satuan,
-                    'tanggal' => $item->created_at()->format('Y-m-d'),
-                    'nama_staff' => $item->user->name,
+                    'tanggal' => $item->created_at->format('Y-m-d'),
+                    'nama_staff' => $item->user ? $item->user->name : null,
                 ];
             });
 
