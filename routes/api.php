@@ -30,6 +30,7 @@
         Route::get('/barang', [BarangController::class, 'index']);
         Route::get('/barang/{id}', [BarangController::class, 'show']);
         Route::get('/barang-keluar', [BarangKeluarController::class, 'index']);
+        Route::get('/barang-keluar/{id}', [BarangKeluarController::class, 'show']);
 
 
         // Laporan Transaksi
@@ -78,7 +79,7 @@
 
             // Barang Keluar
             Route::post('/barang-keluar', [BarangKeluarController::class, 'store']);
-
+            Route::delete('/barang-keluar/{id}', [BarangKeluarController::class, 'destroy']);
             Route::get('/laporan/barang-masuk', [BarangMasukController::class, 'laporan']);
 
             // Mutasi Gudang

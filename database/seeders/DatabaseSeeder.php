@@ -2,26 +2,24 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
-
 
 class DatabaseSeeder extends Seeder
 {
     /**
-     * Seed the application's database.
+     * Jalankan semua seeder untuk database aplikasi Anda.
+     *
+     * Method ini akan memanggil semua seeder lain dengan urutan yang benar
+     * untuk menghindari error foreign key.
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        User::factory()->create([
-            'name' => 'admin',
-            'email' => 'admin@gmail.com',
-            'password' => Hash::make('password123'), // Ganti dengan password yang sesuai
-            'role' => 'admin',
+        $this->call([
+            UserSeeder::class,
+            GudangSeeder::class,
+            KategoriSeeder::class,
+            BarangSeeder::class
         ]);
     }
 }

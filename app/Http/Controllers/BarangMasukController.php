@@ -43,11 +43,17 @@ class BarangMasukController extends Controller
     {
         // Cek apakah user mengirim barang_id atau data barang baru
         if (!$request->has('barang_id')) {
+            $satuanValid = [
+            'PCS', 'KRT', 'KDS', 'LSN', 'PAK', 'ROL', 'SET', 'BOT', 'DRM', 'BOX',
+            'BAL', 'BKS', 'GLS', 'SHP', 'BAG', 'TIN', 'GRS', 'LTR', 'KG', 'G',
+            'M', 'CM', 'MTR', 'AMP', 'CAP', 'TAB', 'TRAY'
+        ];
+
             // Validasi data barang baru
             $validatedBarang = $request->validate([
                 'nama_barang' => 'required|string',
                 'kategori_id' => 'required|exists:kategori,id',
-                'satuan' => 'required|string',
+                'satuan' => ['required', 'string', Rule::in($satuanValid)],
                 'gudang_id' => 'required|exists:gudang,id',
             ]);
 
@@ -100,7 +106,7 @@ class BarangMasukController extends Controller
             'data' => $barangMasuk,
             'meta' => [
                 'status' => 'success',
-                'message' => 'Barang masuk berhasil ditambahkan (dan barang dibuat jika perlu)'
+                'message' => 'Barang masuk berhasil ditambahkan'
             ]
         ], 201);
     }
