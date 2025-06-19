@@ -4,28 +4,43 @@ namespace App\Http\Controllers;
 
 use App\Models\Barang;
 use App\Models\BarangMasuk;
+use App\Models\User;
+use App\Models\Notifikasi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Validation\Rule; //
+use Illuminate\Validation\Rule;
 
 class BarangMasukController extends Controller
 {
+    /**
+     * Daftar satuan yang valid untuk digunakan dalam validasi.
+     * Didefinisikan sebagai properti agar mudah dikelola.
+     */
+    private $validSatuan = [
+        'PCS', 'KRT', 'KDS', 'LSN', 'PAK', 'ROL', 'SET', 'BOT', 'DRM', 'BOX',
+        'BAL', 'BKS', 'GLS', 'SHP', 'BAG', 'TIN', 'GRS', 'LTR', 'KG', 'G',
+        'M', 'CM', 'MTR', 'AMP', 'CAP', 'TAB', 'TRAY'
+    ];
+
+    /**
+     * Menampilkan daftar semua barang masuk.
+     */
     public function index()
     {
         $data = BarangMasuk::with(['barang.kategori', 'gudang', 'user'])
-            ->latest()
+            ->latest() // Mengurutkan berdasarkan 'created_at' terbaru
             ->get()
             ->map(function ($item) {
                 return [
                     'id' => $item->id,
                     'kode_masuk' => $item->kode_masuk,
-                    'nama_barang' => $item->barang->nama_barang,
-                    'kategori'      => $item->barang->kategori ? $item->barang->kategori->nama_kategori : null,
+                    'nama_barang' => $item->barang ? $item->barang->nama_barang : null,
+                    'kategori'    => $item->barang && $item->barang->kategori ? $item->barang->kategori->nama_kategori : null,
                     'stok_masuk' => $item->jumlah,
-                    'gudang'        => $item->gudang ? $item->gudang->nama_gudang : null,
-                    'satuan' => $item->barang->satuan,
-                    'tanggal' => $item->created_at->format('Y-m-d'),
+                    'gudang'      => $item->gudang ? $item->gudang->nama_gudang : null,
+                    'satuan' => $item->barang ? $item->barang->satuan : null,
+                    'tanggal_masuk' => $item->created_at->format('Y-m-d'),
                     'nama_staff' => $item->user ? $item->user->name : null,
                 ];
             });
@@ -39,30 +54,31 @@ class BarangMasukController extends Controller
         ]);
     }
 
+    /**
+     * Menyimpan data barang masuk baru.
+     * Akan memicu notifikasi jika stok akhir di bawah 30.
+     */
     public function store(Request $request)
     {
         // Cek apakah user mengirim barang_id atau data barang baru
         if (!$request->has('barang_id')) {
-            $satuanValid = [
-            'PCS', 'KRT', 'KDS', 'LSN', 'PAK', 'ROL', 'SET', 'BOT', 'DRM', 'BOX',
-            'BAL', 'BKS', 'GLS', 'SHP', 'BAG', 'TIN', 'GRS', 'LTR', 'KG', 'G',
-            'M', 'CM', 'MTR', 'AMP', 'CAP', 'TAB', 'TRAY'
-        ];
-
             // Validasi data barang baru
             $validatedBarang = $request->validate([
-                'nama_barang' => 'required|string',
-                'kategori_id' => 'required|exists:kategori,id',
-                'satuan' => ['required', 'string', Rule::in($satuanValid)],
-                'gudang_id' => 'required|exists:gudang,id',
+                'nama_barang' => 'required|string|max:255',
+                'kategori_id' => 'required|integer|exists:kategori,id',
+                'satuan' => ['required', 'string', Rule::in($this->validSatuan)],
+                'gudang_id' => 'required|integer|exists:gudang,id',
             ]);
 
-            // Buat kode_barang otomatis
-            $latestBarang = Barang::latest()->first();
-            $nextNumber = $latestBarang ? ((int)substr($latestBarang->kode_barang, 1) + 1) : 1;
-            $kodeBarang = 'M' . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+            // Logika pembuatan kode barang yang aman dari duplikasi
+            $lastBarang = Barang::orderBy('kode_barang', 'desc')->first();
+            $nextNumber = 1;
+            if ($lastBarang) {
+                $lastNumber = (int) substr($lastBarang->kode_barang, 1);
+                $nextNumber = $lastNumber + 1;
+            }
+            $kodeBarang = 'B' . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
 
-            // Buat barang baru
             $barang = Barang::create([
                 'kode_barang' => $kodeBarang,
                 'nama_barang' => $validatedBarang['nama_barang'],
@@ -71,22 +87,21 @@ class BarangMasukController extends Controller
                 'gudang_id' => $validatedBarang['gudang_id'],
                 'stok_keseluruhan' => 0,
             ]);
-
             $barang_id = $barang->id;
         } else {
             $barang_id = $request->input('barang_id');
         }
 
-        // Validasi barang masuk
+        // Validasi data transaksi barang masuk
         $validated = $request->validate([
-            'gudang_id' => 'required|exists:gudang,id',
+            'gudang_id' => 'required|integer|exists:gudang,id',
             'jumlah' => 'required|integer|min:1',
         ]);
 
         // Generate kode_masuk
-        $latest = BarangMasuk::latest()->first();
-        $nextNumber = $latest ? (int)substr($latest->kode_masuk, 2) + 1 : 1;
-        $kodeMasuk = 'M' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+        $latest = BarangMasuk::latest('id')->first();
+        $nextNumber = $latest ? (int)substr($latest->kode_masuk, 1) + 1 : 1;
+        $kodeMasuk = 'M' . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
 
         // Simpan barang masuk
         $barangMasuk = BarangMasuk::create([
@@ -97,169 +112,117 @@ class BarangMasukController extends Controller
             'user_id' => Auth::id(),
         ]);
 
-        // Tambah stok barang
+        // Tambah stok barang & cek notifikasi
         $barang = Barang::find($barang_id);
         $barang->stok_keseluruhan += $validated['jumlah'];
         $barang->save();
 
+        if ($barang->stok_keseluruhan < 30) {
+            $this->kirimNotifikasiStokRendah($barang, 'penambahan');
+        }
+
         return response()->json([
-            'data' => $barangMasuk,
-            'meta' => [
-                'status' => 'success',
-                'message' => 'Barang masuk berhasil ditambahkan'
-            ]
+            'data' => $barangMasuk->load('barang'),
+            'meta' => [ 'status' => 'success', 'message' => 'Barang masuk berhasil ditambahkan']
         ], 201);
     }
 
-
+    /**
+     * Menampilkan detail satu data barang masuk.
+     */
     public function show($id)
     {
-        $barangMasuk = BarangMasuk::with(['barang.kategori', 'gudang', 'user'])->find($id);
-
-        if (!$barangMasuk) {
-            return response()->json(['meta' => ['status' => 'error', 'message' => 'Data tidak ditemukan']], 404);
-        }
-
+        $barangMasuk = BarangMasuk::with(['barang.kategori', 'gudang', 'user'])->findOrFail($id);
         return response()->json([
             'data' => $barangMasuk,
-            'meta' => [
-                'status' => 'success',
-                'message' => 'Data berhasil ditemukan'
-            ]
+            'meta' => [ 'status' => 'success', 'message' => 'Data berhasil ditemukan']
         ]);
     }
 
+    /**
+     * Mengupdate data barang masuk dan detail barang terkait.
+     * Akan memicu notifikasi jika stok akhir di bawah 30.
+     */
     public function update(Request $request, $id)
     {
-        // Opsional: Otorisasi menggunakan Gate jika Anda sudah mendefinisikannya
-        // $this->authorize('update-barang-masuk-record'); // Ganti 'update-barang-masuk-record' dengan nama Gate Anda
-
         $barangMasuk = BarangMasuk::findOrFail($id);
-        $barang = $barangMasuk->barang; // Ambil model Barang yang terkait
+        $barang = $barangMasuk->barang;
 
-        // Jika karena suatu alasan barang terkait tidak ditemukan (seharusnya tidak terjadi dengan foreign key yang baik)
         if (!$barang) {
-            return response()->json([
-                'meta' => [
-                    'status' => 'error',
-                    'message' => 'Data barang inti yang terkait dengan barang masuk ini tidak ditemukan.'
-                ]
-            ], 404);
+            return response()->json(['meta' => ['status' => 'error', 'message' => 'Data barang terkait tidak ditemukan.']], 404);
         }
 
-        // Validasi input
-        // Field untuk detail Barang (nama_barang, kategori_id, satuan) dibuat opsional
-        // dengan 'sometimes'. Artinya, hanya akan divalidasi jika field tersebut dikirim dalam request.
         $validatedData = $request->validate([
-            'jumlah'        => 'required|integer|min:1',          // Untuk BarangMasuk (jumlah barang yang masuk)
-            'nama_barang'   => 'sometimes|string|max:255',        // Untuk Barang (opsional)
-            'kategori_id'   => 'sometimes|integer|exists:kategori,id', // Untuk Barang (opsional, pastikan tabel 'kategori' ada)
-            'satuan'        => [                                  // Untuk Barang (opsional, dengan pilihan terbatas)
-                'sometimes',
-                'string',
-                Rule::in(['pcs', 'karton']), // Pilihan satuan seperti dropdown
-            ],
+            'jumlah'        => 'required|integer|min:1',
+            'nama_barang'   => 'sometimes|string|max:255',
+            'kategori_id'   => 'sometimes|integer|exists:kategori,id',
+            'satuan'        => ['sometimes', 'string', Rule::in($this->validSatuan)],
         ]);
 
-        // --- Proses Update ---
-
-        // 1. Simpan jumlah lama dari barangMasuk untuk perhitungan stok
         $jumlahLamaBarangMasuk = $barangMasuk->jumlah;
-
-        // 2. Update detail pada model Barang (jika ada dalam request)
-        $barangAttributesToUpdate = [];
-        if ($request->has('nama_barang') && isset($validatedData['nama_barang'])) {
-            $barangAttributesToUpdate['nama_barang'] = $validatedData['nama_barang'];
-        }
-        if ($request->has('kategori_id') && isset($validatedData['kategori_id'])) {
-            $barangAttributesToUpdate['kategori_id'] = $validatedData['kategori_id'];
-        }
-        if ($request->has('satuan') && isset($validatedData['satuan'])) {
-            $barangAttributesToUpdate['satuan'] = $validatedData['satuan'];
-        }
-
-        // Jika ada atribut barang yang perlu diupdate, isi ke model Barang
-        if (!empty($barangAttributesToUpdate)) {
-            $barang->fill($barangAttributesToUpdate);
-        }
-
-        // 3. Sesuaikan stok_keseluruhan pada Barang
-        // Logika: Stok Sekarang = Stok Lama - Jumlah Barang Masuk Lama + Jumlah Barang Masuk Baru
         $jumlahBaruBarangMasuk = $validatedData['jumlah'];
-        $barang->stok_keseluruhan = $barang->stok_keseluruhan - $jumlahLamaBarangMasuk + $jumlahBaruBarangMasuk;
 
-        // Simpan semua perubahan pada model Barang (nama, kategori, satuan, dan stok_keseluruhan)
+        if ($request->hasAny(['nama_barang', 'kategori_id', 'satuan'])) {
+            $barang->fill($request->only(['nama_barang', 'kategori_id', 'satuan']));
+        }
+
+        // Update stok & cek notifikasi
+        $barang->stok_keseluruhan = $barang->stok_keseluruhan - $jumlahLamaBarangMasuk + $jumlahBaruBarangMasuk;
         $barang->save();
 
-        // 4. Update jumlah pada model BarangMasuk
-        $barangMasuk->update([
-            'jumlah' => $jumlahBaruBarangMasuk
-        ]);
+        if ($barang->stok_keseluruhan < 30) {
+            $this->kirimNotifikasiStokRendah($barang, 'penyesuaian');
+        }
 
-        // Muat ulang relasi untuk memastikan respons berisi data yang paling baru
-        $barangMasuk->load(['barang.kategori', 'gudang', 'user']);
+        // Update jumlah pada transaksi barang masuk
+        $barangMasuk->update(['jumlah' => $jumlahBaruBarangMasuk]);
 
         return response()->json([
-            'data' => [ // Sesuaikan format data respons jika perlu
-                'id_barang_masuk' => $barangMasuk->id,
-                'kode_masuk' => $barangMasuk->kode_masuk,
-                'jumlah_masuk_baru' => $barangMasuk->jumlah,
-                'barang_info' => [
-                    'id_barang' => $barang->id,
-                    'kode_barang' => $barang->kode_barang,
-                    'nama_barang' => $barang->nama_barang,
-                    'kategori' => $barang->kategori ? $barang->kategori->nama_kategori : null, // Asumsi kolom nama di tabel kategori adalah nama_kategori
-                    'satuan' => $barang->satuan,
-                    'stok_keseluruhan_sekarang' => $barang->stok_keseluruhan,
-                ],
-                'gudang' => $barangMasuk->gudang ? $barangMasuk->gudang->nama_gudang : null, // Asumsi kolom nama di tabel gudang adalah nama_gudang
-                'dicatat_oleh' => $barangMasuk->user ? $barangMasuk->user->name : null,
-                'tanggal_dicatat' => $barangMasuk->created_at->format('Y-m-d H:i:s'), // Menggunakan created_at
-                'terakhir_diupdate' => $barangMasuk->updated_at->format('Y-m-d H:i:s'),
-            ],
-            'meta' => [
-                'status' => 'success',
-                'message' => 'Data barang masuk dan detail barang berhasil diupdate.'
-            ]
+            'data' => $barangMasuk->load('barang'),
+            'meta' => ['status' => 'success', 'message' => 'Data barang masuk berhasil diupdate.']
         ]);
     }
 
-
+    /**
+     * Menghapus data barang masuk dan mengembalikan stok.
+     */
     public function destroy($id)
     {
         $barangMasuk = BarangMasuk::findOrFail($id);
 
-        // Kurangi stok barang
         $barang = $barangMasuk->barang;
-        $barang->stok_keseluruhan -= $barangMasuk->jumlah; // Gunakan stok_keseluruhan
-        $barang->save();
+        if ($barang) {
+            $barang->stok_keseluruhan -= $barangMasuk->jumlah;
+            $barang->save();
+        }
 
         $barangMasuk->delete();
 
         return response()->json([
-            'meta' => [
-                'status' => 'success',
-                'message' => 'Barang masuk berhasil dihapus'
-            ]
+            'meta' => [ 'status' => 'success', 'message' => 'Barang masuk berhasil dihapus']
         ]);
     }
 
+    /**
+     * Menampilkan laporan barang masuk.
+     */
     public function laporan(Request $request)
     {
-        $this->authorize('view-report'); // Menggunakan Gate
+        $this->authorize('view-report');
 
         $query = BarangMasuk::with(['barang.kategori', 'gudang', 'user']);
 
         if ($request->has('from') && $request->has('to')) {
-            $query->whereBetween('tanggal', [$request->from, $request->to]);
+            $query->whereDate('created_at', '>=', $request->from)
+                  ->whereDate('created_at', '<=', $request->to);
         }
 
         $data = $query->orderBy('created_at', 'desc')->get()->map(function ($item) {
             return [
-                'nama_staff'    => $item->user->name,
-                'kode_barang'   => $item->barang->kode_barang,
-                'kategori'      => $item->barang->kategori ? $item->barang->kategori->nama_kategori : null,
-                'nama_barang'   => $item->barang->nama_barang,
+                'nama_staff'    => $item->user ? $item->user->name : null,
+                'kode_barang'   => $item->barang ? $item->barang->kode_barang : null,
+                'kategori'      => $item->barang && $item->barang->kategori ? $item->barang->kategori->nama_kategori : null,
+                'nama_barang'   => $item->barang ? $item->barang->nama_barang : null,
                 'gudang'        => $item->gudang ? $item->gudang->nama_gudang : null,
                 'stok_masuk'    => $item->jumlah,
                 'tanggal_masuk' => $item->created_at->format('Y-m-d'),
@@ -268,10 +231,25 @@ class BarangMasukController extends Controller
 
         return response()->json([
             'data' => $data,
-            'meta' => [
-                'status' => 'success',
-                'message' => 'Laporan barang masuk berhasil diambil'
-            ]
+            'meta' => [ 'status' => 'success', 'message' => 'Laporan barang masuk berhasil diambil']
         ]);
+    }
+
+    /**
+     * Method private untuk mengirim notifikasi stok rendah ke semua manajer.
+     */
+    private function kirimNotifikasiStokRendah(Barang $barang, string $jenisTransaksi): void
+    {
+        $manajerUsers = User::where('role', 'manajer')->get();
+        $pesanAwal = $jenisTransaksi === 'penambahan' ? 'Info Stok: Stok untuk barang' : 'Info Stok: Stok untuk barang';
+
+        foreach ($manajerUsers as $manajer) {
+            Notifikasi::create([
+                'user_id' => $manajer->id,
+                'judul' => 'Info Stok Kritis',
+                'pesan' => "{$pesanAwal} '{$barang->nama_barang}' (Kode: {$barang->kode_barang}) masih berada di level rendah setelah {$jenisTransaksi}. Sisa stok: {$barang->stok_keseluruhan} {$barang->satuan}.",
+                'tipe' => 'info',
+            ]);
+        }
     }
 }

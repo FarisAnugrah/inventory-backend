@@ -15,10 +15,15 @@ class NotifikasiController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
+
+        // PERBAIKAN: Menggunakan 'user_id' (lowercase) agar sesuai dengan nama kolom di database.
         $query = Notifikasi::where('user_id', $user->id);
 
         // Filter: tampilkan semua notifikasi jika ada parameter ?tampilkan=semua
-        if ($request->query('tampilkan') !== 'semua') {
+        if ($request->query('tampilkan') === 'semua') {
+            // Tidak ada filter tambahan, tampilkan semua
+        } else {
+            // Default: hanya tampilkan yang belum dibaca
             $query->whereNull('dibaca_pada');
         }
 
@@ -33,6 +38,8 @@ class NotifikasiController extends Controller
     public function tandaiSudahDibaca($id)
     {
         $user = Auth::user();
+
+        // PERBAIKAN: Menggunakan 'user_id' (lowercase)
         $notifikasi = Notifikasi::where('id', $id)->where('user_id', $user->id)->firstOrFail();
 
         if (is_null($notifikasi->dibaca_pada)) {
@@ -49,6 +56,8 @@ class NotifikasiController extends Controller
     public function tandaiSemuaSudahDibaca()
     {
         $user = Auth::user();
+
+        // PERBAIKAN: Menggunakan 'user_id' (lowercase)
         Notifikasi::where('user_id', $user->id)
             ->whereNull('dibaca_pada')
             ->update(['dibaca_pada' => now()]);

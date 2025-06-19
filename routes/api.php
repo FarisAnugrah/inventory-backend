@@ -59,10 +59,6 @@
             Route::put('/kategori/{id}', [KategoriController::class, 'update']);
             Route::delete('/kategori/{id}', [KategoriController::class, 'destroy']);
 
-            // Transaksi (lihat laporan)
-            Route::get('/transaksi', [TransaksiController::class, 'index']);
-            Route::get('/transaksi/{id}', [TransaksiController::class, 'show']);
-
             // Admin Settings
             Route::post('/admin/setting', [AdminController::class, 'settings']);
         });
