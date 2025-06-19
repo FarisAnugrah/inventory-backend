@@ -7,6 +7,8 @@ use App\Models\BarangKeluar;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Models\User;
+use App\Models\Notifikasi;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 
@@ -103,35 +105,50 @@ class BarangKeluarController extends Controller
      */
     public function update(Request $request, $id)
     {
-        // Hanya cari permintaan yang statusnya masih 'pending'
         $barangKeluar = BarangKeluar::where('id', $id)->where('status', 'pending')->firstOrFail();
 
-        // Manajer hanya perlu mengirimkan status ('approved' atau 'rejected') dan catatan (opsional)
         $validatedData = $request->validate([
-            'status' => ['required', Rule::in(['approved', 'rejected'])]
+            'status' => ['required', Rule::in(['approved', 'rejected'])],
+            // 'catatan_approval' kita hapus sesuai permintaan sebelumnya
         ]);
 
         $barang = $barangKeluar->barang;
 
         DB::beginTransaction();
         try {
-            // Jika statusnya 'approved', maka kurangi stok barang.
             if ($validatedData['status'] === 'approved') {
-                // Pengecekan ulang stok saat akan diapprove (sangat penting!)
                 if ($barang->stok_keseluruhan < $barangKeluar->jumlah) {
                     DB::rollBack();
                     return response()->json([
                         'meta' => ['status' => 'error', 'message' => 'Gagal menyetujui: Stok barang sudah tidak mencukupi.', 'stok_tersedia' => $barang->stok_keseluruhan,]
                     ], 422);
                 }
+
                 // Kurangi stok barang
                 $barang->stok_keseluruhan -= $barangKeluar->jumlah;
                 $barang->save();
+
+                // --- LOGIKA PEMBUATAN NOTIFIKASI ---
+                // Cek stok setelah dikurangi
+                if ($barang->stok_keseluruhan < 30) {
+                    // Cari semua user dengan peran 'manajer'
+                    $manajerUsers = User::where('role', 'manajer')->get();
+
+                    foreach ($manajerUsers as $manajer) {
+                        Notifikasi::create([
+                            'user_id' => $manajer->id,
+                            'judul' => 'Peringatan Stok Rendah',
+                            'pesan' => "Stok untuk barang '{$barang->nama_barang}' (Kode: {$barang->kode_barang}) telah mencapai level rendah. Sisa stok: {$barang->stok_keseluruhan} {$barang->satuan}.",
+                            'tipe' => 'peringatan',
+                        ]);
+                    }
+                }
+                // --- AKHIR LOGIKA NOTIFIKASI ---
             }
 
-            // Update status dan catat siapa & kapan approval terjadi
+            // Update status permintaan
             $barangKeluar->status = $validatedData['status'];
-            $barangKeluar->approved_by = Auth::id(); // ID Manajer yang login
+            $barangKeluar->approved_by = Auth::id();
             $barangKeluar->approved_at = now();
             $barangKeluar->save();
 

@@ -4,73 +4,55 @@ namespace App\Http\Controllers;
 
 use App\Models\Notifikasi;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class NotifikasiController extends Controller
 {
-    public function index()
+    /**
+     * Menampilkan notifikasi untuk user yang sedang login.
+     * Secara default menampilkan yang belum dibaca.
+     */
+    public function index(Request $request)
     {
-        return response()->json(Notifikasi::with('barang', 'manajer')->get());
-    }
+        $user = Auth::user();
+        $query = Notifikasi::where('user_id', $user->id);
 
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'barang_id' => 'required|exists:barang,id',
-            'manajer_id' => 'required|exists:users,id',
-            'stok_saat_ini' => 'required|integer',
-            'aksi' => 'required|in:belum direspons,restock,abaikan',
-            'status' => 'required|in:baru,dibaca',
-            'tanggal' => 'required|date',
-        ]);
-
-        $notifikasi = Notifikasi::create($validated);
-
-        return response()->json($notifikasi, 201);
-    }
-
-    public function show($id)
-    {
-        $notifikasi = Notifikasi::with('barang', 'manajer')->find($id);
-
-        if (!$notifikasi) {
-            return response()->json(['error' => 'Notifikasi not found'], 404);
+        // Filter: tampilkan semua notifikasi jika ada parameter ?tampilkan=semua
+        if ($request->query('tampilkan') !== 'semua') {
+            $query->whereNull('dibaca_pada');
         }
+
+        $notifikasi = $query->latest()->paginate(20);
 
         return response()->json($notifikasi);
     }
 
-    public function update(Request $request, $id)
+    /**
+     * Menandai satu notifikasi sebagai sudah dibaca.
+     */
+    public function tandaiSudahDibaca($id)
     {
-        $notifikasi = Notifikasi::find($id);
+        $user = Auth::user();
+        $notifikasi = Notifikasi::where('id', $id)->where('user_id', $user->id)->firstOrFail();
 
-        if (!$notifikasi) {
-            return response()->json(['error' => 'Notifikasi not found'], 404);
+        if (is_null($notifikasi->dibaca_pada)) {
+            $notifikasi->dibaca_pada = now();
+            $notifikasi->save();
         }
 
-        $validated = $request->validate([
-            'barang_id' => 'required|exists:barang,id',
-            'manajer_id' => 'required|exists:users,id',
-            'stok_saat_ini' => 'required|integer',
-            'aksi' => 'required|in:belum direspons,restock,abaikan',
-            'status' => 'required|in:baru,dibaca',
-            'tanggal' => 'required|date',
-        ]);
-
-        $notifikasi->update($validated);
-
-        return response()->json($notifikasi);
+        return response()->json(['message' => 'Notifikasi berhasil ditandai sebagai sudah dibaca.']);
     }
 
-    public function destroy($id)
+    /**
+     * Menandai semua notifikasi sebagai sudah dibaca.
+     */
+    public function tandaiSemuaSudahDibaca()
     {
-        $notifikasi = Notifikasi::find($id);
+        $user = Auth::user();
+        Notifikasi::where('user_id', $user->id)
+            ->whereNull('dibaca_pada')
+            ->update(['dibaca_pada' => now()]);
 
-        if (!$notifikasi) {
-            return response()->json(['error' => 'Notifikasi not found'], 404);
-        }
-
-        $notifikasi->delete();
-
-        return response()->json(['message' => 'Notifikasi deleted successfully']);
+        return response()->json(['message' => 'Semua notifikasi berhasil ditandai sebagai sudah dibaca.']);
     }
 }

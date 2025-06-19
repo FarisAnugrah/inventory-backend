@@ -93,7 +93,12 @@
             Route::put('/barang-keluar/{id}', [BarangKeluarController::class, 'update']);
 
             // Notifikasi
-            Route::get('/notifikasi', [NotifikasiController::class, 'index']);
-            Route::get('/notifikasi/{id}', [NotifikasiController::class, 'show']);
+            // --- RUTE NOTIFIKASI BARU ---
+    // Melihat daftar notifikasi
+    Route::get('/notifikasi', [NotifikasiController::class, 'index']);
+    // Menandai satu notifikasi sebagai sudah dibaca
+    Route::put('/notifikasi/{id}/baca', [NotifikasiController::class, 'tandaiSudahDibaca']);
+    // Menandai semua notifikasi sebagai sudah dibaca
+    Route::put('/notifikasi/baca-semua', [NotifikasiController::class, 'tandaiSemuaSudahDibaca']);
         });
     });

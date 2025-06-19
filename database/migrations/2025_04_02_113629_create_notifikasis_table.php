@@ -13,13 +13,12 @@ return new class extends Migration
     {
         Schema::create('notifikasi', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('barang_id')->constrained('barang');
-            $table->foreignId('manajer_id')->constrained('users');
-            $table->integer('stok_saat_ini');
-            $table->enum('aksi', ['belum direspons', 'restock', 'abaikan']);
-            $table->enum('status', ['baru', 'dibaca']);
-            $table->timestamp('tanggal');
-            $table->timestamps();
+            $table->foreignId('user_id')->comment('User yang akan menerima notifikasi (Manajer)')->constrained('users')->onDelete('cascade');
+            $table->string('judul');
+            $table->text('pesan');
+            $table->string('tipe')->default('info'); // Contoh: 'info', 'peringatan', 'bahaya'
+            $table->timestamp('dibaca_pada')->nullable();
+            $table->timestamps(); // created_at
         });
     }
 
